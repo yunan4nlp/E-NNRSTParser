@@ -278,13 +278,14 @@ def batch_biEDU_bert_variable(onebatch, vocab, config, token_helper):
         inst_biEDU_texts = []
         for idy, EDU in enumerate(instance[0].EDUs):
             text = " ".join(EDU.words[:config.max_edu_len])
-            if idy - 1 >= 0:
-                previous_EDU = instance[0].EDUs[idy - 1]
-                previous_text = " ".join(previous_EDU.words[:config.max_edu_len])
-            else:
-                previous_text = token_helper.tokenizer.pad_token
 
-            inst_biEDU_texts.append((previous_text, text))
+            if idy + 1 < len(instance[0].EDUs):
+                next_EDU = instance[0].EDUs[idy + 1]
+                next_text = " ".join(next_EDU.words[:config.max_edu_len])
+            else:
+                next_text = token_helper.tokenizer.pad_token
+
+            inst_biEDU_texts.append((text, next_text))
         input_ids, token_type_ids, attention_mask = token_helper.batch_biEDU_bert_id(inst_biEDU_texts)
         input_ids_list.append(input_ids)
         token_type_ids_list.append(token_type_ids)
