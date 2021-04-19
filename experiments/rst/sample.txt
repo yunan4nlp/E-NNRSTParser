@@ -1,0 +1,16 @@
+Roy_NNP E._NNP Parrott_NNP ,_, the_DT company_NN 's_POS president_NN and_CC chief_NN operating_NN officer_NN since_IN Sept._NNP 1_CD ,_, was_VBD named_VBN to_TO its_PRP$ board_NN ._. <S>
+The_DT appointment_NN increased_VBD the_DT number_NN of_IN directors_NNS to_TO 10_CD ,_, three_CD of_IN whom_WP are_VBP company_NN employees_NNS ._. <S>
+Simpson_NNP is_VBZ an_DT auto_NN parts_NNS maker_NN ._. <P>
+( S r ( NP l ( NP l* ( NP l* ( NP r ( NNP t 0 0 ) ( NP r* ( NNP t 1 1 ) ( NNP t 2 2 ) ) ) ( , t 3 3 ) ) ( NP l ( NP r ( NP r ( DT t 4 4 ) ( NP r* ( NN t 5 5 ) ( POS t 6 6 ) ) ) ( NX l ( NX l* ( NX s ( NN t 7 7 ) ) ( CC t 8 8 ) ) ( NX l ( NX l* ( NN t 9 9 ) ( NN t 10 10 ) ) ( NN t 11 11 ) ) ) ) ( PP l ( IN t 12 12 ) ( NP l ( NNP t 13 13 ) ( CD t 14 14 ) ) ) ) ) ( , t 15 15 ) ) ( S l* ( VP l ( VBD t 16 16 ) ( VP l ( VBN t 17 17 ) ( PP l ( TO t 18 18 ) ( NP r ( PRP$ t 19 19 ) ( NN t 20 20 ) ) ) ) ) ( . t 21 21 ) ) )
+( S r ( NP r ( DT t 23 23 ) ( NN t 24 24 ) ) ( S l* ( VP l ( VP l* ( VBD t 25 25 ) ( NP l ( NP r ( DT t 26 26 ) ( NN t 27 27 ) ) ( PP l ( IN t 28 28 ) ( NP s ( NNS t 29 29 ) ) ) ) ) ( PP l ( TO t 30 30 ) ( NP l ( NP l* ( NP s ( CD t 31 31 ) ) ( , t 32 32 ) ) ( SBAR l ( WHNP r ( NP s ( CD t 33 33 ) ) ( WHPP l ( IN t 34 34 ) ( WHNP s ( WP t 35 35 ) ) ) ) ( S s ( VP l ( VBP t 36 36 ) ( NP r ( NN t 37 37 ) ( NNS t 38 38 ) ) ) ) ) ) ) ) ( . t 39 39 ) ) )
+( S r ( NP s ( NNP t 41 41 ) ) ( S l* ( VP l ( VBZ t 42 42 ) ( NP r ( DT t 43 43 ) ( NP r* ( NN t 44 44 ) ( NP r* ( NNS t 45 45 ) ( NN t 46 46 ) ) ) ) ) ( . t 47 47 ) ) )
+( elab l ( elab l ( leaf t 0 22 ) ( elab l ( leaf t 23 32 ) ( leaf t 33 40 ) ) ) ( leaf t 41 48 ) )
+
+Roy_NNP E._NNP Parrott_NNP ,_, the_DT company_NN 's_POS president_NN and_CC chief_NN operating_NN officer_NN since_IN Sept._NNP 1_CD ,_, was_VBD named_VBN to_TO its_PRP$ board_NN ._. <S>
+The_DT appointment_NN increased_VBD the_DT number_NN of_IN directors_NNS to_TO 10_CD ,_, three_CD of_IN whom_WP are_VBP company_NN employees_NNS ._. <S>
+Simpson_NNP is_VBZ an_DT auto_NN parts_NNS maker_NN ._. <P>
+( S r ( NP l ( NP l* ( NP l* ( NP r ( NNP t 0 0 ) ( NP r* ( NNP t 1 1 ) ( NNP t 2 2 ) ) ) ( , t 3 3 ) ) ( NP l ( NP r ( NP r ( DT t 4 4 ) ( NP r* ( NN t 5 5 ) ( POS t 6 6 ) ) ) ( NX l ( NX l* ( NX s ( NN t 7 7 ) ) ( CC t 8 8 ) ) ( NX l ( NX l* ( NN t 9 9 ) ( NN t 10 10 ) ) ( NN t 11 11 ) ) ) ) ( PP l ( IN t 12 12 ) ( NP l ( NNP t 13 13 ) ( CD t 14 14 ) ) ) ) ) ( , t 15 15 ) ) ( S l* ( VP l ( VBD t 16 16 ) ( VP l ( VBN t 17 17 ) ( PP l ( TO t 18 18 ) ( NP r ( PRP$ t 19 19 ) ( NN t 20 20 ) ) ) ) ) ( . t 21 21 ) ) )
+( S r ( NP r ( DT t 23 23 ) ( NN t 24 24 ) ) ( S l* ( VP l ( VP l* ( VBD t 25 25 ) ( NP l ( NP r ( DT t 26 26 ) ( NN t 27 27 ) ) ( PP l ( IN t 28 28 ) ( NP s ( NNS t 29 29 ) ) ) ) ) ( PP l ( TO t 30 30 ) ( NP l ( NP l* ( NP s ( CD t 31 31 ) ) ( , t 32 32 ) ) ( SBAR l ( WHNP r ( NP s ( CD t 33 33 ) ) ( WHPP l ( IN t 34 34 ) ( WHNP s ( WP t 35 35 ) ) ) ) ( S s ( VP l ( VBP t 36 36 ) ( NP r ( NN t 37 37 ) ( NNS t 38 38 ) ) ) ) ) ) ) ) ( . t 39 39 ) ) )
+( S r ( NP s ( NNP t 41 41 ) ) ( S l* ( VP l ( VBZ t 42 42 ) ( NP r ( DT t 43 43 ) ( NP r* ( NN t 44 44 ) ( NP r* ( NNS t 45 45 ) ( NN t 46 46 ) ) ) ) ) ( . t 47 47 ) ) )
+( elab l ( elab l ( leaf t 0 22 ) ( elab l ( leaf t 23 32 ) ( leaf t 33 40 ) ) ) ( leaf t 41 48 ) )
+

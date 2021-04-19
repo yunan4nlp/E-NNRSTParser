@@ -1,0 +1,14 @@
+.DS_Store
+config.rst.bert
+.vscode
+data/__pycache__
+driver/__pycache__
+experiments/rst_model
+experiments/rst/rst.test38
+experiments/rst/rst.dev35
+experiments/rst/rst.train312
+experiments/rst/sample.txt.*
+transition/__pycache__
+modules/__pycache__
+text
+run.sh
