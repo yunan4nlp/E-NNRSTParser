@@ -12,3 +12,5 @@ transition/__pycache__
 modules/__pycache__
 text
 run.sh
+BiaffineDParser/__pycache__
+new-parser-model
