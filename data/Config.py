@@ -153,3 +153,6 @@ class Configurable(object):
     @property
     def max_state_len(self):
         return self._config.getint('Run','max_state_len')
+    @property
+    def seed(self):
+        return self._config.getint('Run','seed')

@@ -160,11 +160,6 @@ def predict(data, parser, vocab, config, token_helper, outputFile):
 if __name__ == '__main__':
     print("Process ID {}, Process Parent ID {}".format(os.getpid(), os.getppid()))
 
-    random.seed(666)
-    np.random.seed(666)
-    torch.cuda.manual_seed(666)
-    torch.manual_seed(666)
-
     # torch version
     print("Torch Version: ", torch.__version__)
 
@@ -181,6 +176,12 @@ if __name__ == '__main__':
 
     args, extra_args = argparser.parse_known_args()
     config = Configurable(args.config_file, extra_args)
+
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.cuda.manual_seed(config.seed)
+    torch.manual_seed(config.seed)
+
 
     train_data = read_corpus(config.train_file)
     dev_data = read_corpus(config.dev_file)
