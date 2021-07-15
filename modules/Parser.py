@@ -3,10 +3,11 @@ import torch.nn.functional as F
 from modules.Layer import *
 
 class DisParser(object):
-    def __init__(self, global_encoder, EDULSTM, dec, config):
+    def __init__(self, global_encoder, EDULSTM, typeEmb, dec, config):
         self.config = config
         self.global_encoder = global_encoder
         self.EDULSTM = EDULSTM
+        self.typeEmb = typeEmb
         self.dec = dec
         self.use_cuda = next(filter(lambda p: p.requires_grad, dec.parameters())).is_cuda
         self.batch_states = []
@@ -20,12 +21,14 @@ class DisParser(object):
     def train(self):
         self.global_encoder.train()
         self.EDULSTM.train()
+        self.typeEmb.train()
         self.dec.train()
         self.training = True
 
     def eval(self):
         self.global_encoder.eval()
         self.EDULSTM.eval()
+        self.typeEmb.eval()
         self.dec.eval()
         self.training = False
 
@@ -33,7 +36,8 @@ class DisParser(object):
                doc_inputs,
                EDU_offset_index,
                batch_denominator,
-               edu_lengths 
+               edu_lengths,
+               edu_types 
                ):
 
         doc_input_ids, doc_token_type_ids, doc_attention_mask = doc_inputs
@@ -44,6 +48,7 @@ class DisParser(object):
 
             EDU_offset_index = EDU_offset_index.cuda()
             batch_denominator = batch_denominator.cuda()
+            edu_types = edu_types.cuda()
 
         bert_represents = self.global_encoder(
             doc_input_ids, doc_token_type_ids, doc_attention_mask,
@@ -52,7 +57,9 @@ class DisParser(object):
 
         edu_hiddens = self.EDULSTM(bert_represents, edu_lengths)
 
-        self.edu_represents = torch.cat([bert_represents, edu_hiddens], dim=-1)
+        edu_type_embeddings = self.typeEmb(edu_types)
+
+        self.edu_represents = torch.cat([bert_represents, edu_hiddens, edu_type_embeddings], dim=-1)
 
 
     def max_action_len(self, batch_feats):

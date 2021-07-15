@@ -7,6 +7,7 @@ from data.Config import *
 import time
 from modules.Parser import *
 from modules.EDULSTM import *
+from modules.TypeEmb import *
 from modules.Decoder import *
 from modules.XLNetTune import *
 from data.TokenHelper import *
@@ -24,6 +25,7 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
 
     parser_param = list(parser.global_encoder.mlp_words.parameters()) + \
                    list(parser.global_encoder.rescale.parameters()) + \
+                   list(parser.typeEmb.parameters()) + \
                    list(parser.EDULSTM.parameters()) + \
                    list(parser.dec.parameters())
 
@@ -48,7 +50,7 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
             doc_inputs = \
                 batch_doc_variable(onebatch, vocab, config, token_helper)
 
-            EDU_offset_index, batch_denominator, edu_lengths = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
+            EDU_offset_index, batch_denominator, edu_lengths, edu_types = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
 
             batch_feats, batch_actions, batch_action_indexes, batch_candidate = \
                 actions_variable(onebatch, vocab)
@@ -58,7 +60,7 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
             with autocast():
                 parser.encode(
                     doc_inputs,
-                    EDU_offset_index, batch_denominator, edu_lengths
+                    EDU_offset_index, batch_denominator, edu_lengths, edu_types
                 )
                 predict_actions = parser.decode(onebatch, batch_feats, batch_candidate, vocab)
                 loss = parser.compute_loss(batch_action_indexes)
@@ -145,14 +147,14 @@ def predict(data, parser, vocab, config, tokenizer, outputFile):
     for onebatch in data_iter(data, config.test_batch_size, False):
         doc_inputs = batch_doc_variable(onebatch, vocab, config, token_helper)
 
-        EDU_offset_index, batch_denominator, edu_lengths = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
+        EDU_offset_index, batch_denominator, edu_lengths, edu_types = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
 
 
         # with torch.autograd.profiler.profile() as prof:
         with autocast():
             parser.encode(
                 doc_inputs,
-                EDU_offset_index, batch_denominator, edu_lengths
+                EDU_offset_index, batch_denominator, edu_lengths, edu_types
             )
             parser.decode(onebatch, None, None, vocab)
         batch_size = len(onebatch)
@@ -236,6 +238,7 @@ if __name__ == '__main__':
 
     global_encoder = GlobalEncoder(vocab, config, auto_extractor)
     EDULSTM = EDULSTM(vocab, config)
+    typeEmb = TypeEmb(vocab, config)
     dec = Decoder(vocab, config)
     pickle.dump(vocab, open(config.save_vocab_path, 'wb'))
 
@@ -246,8 +249,9 @@ if __name__ == '__main__':
         #torch.backends.cudnn.benchmark = True
         global_encoder.cuda()
         EDULSTM = EDULSTM.cuda()
+        typeEmb = typeEmb.cuda()
         dec = dec.cuda()
 
-    parser = DisParser(global_encoder, EDULSTM, dec, config)
+    parser = DisParser(global_encoder, EDULSTM, typeEmb, dec, config)
     train(train_insts, dev_insts, test_insts, parser, vocab, config, token_helper)
 

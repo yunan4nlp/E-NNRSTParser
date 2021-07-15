@@ -74,6 +74,9 @@ class Configurable(object):
     def word_dims(self):
         return self._config.getint('Network','word_dims')
     @property
+    def edu_type_dims(self):
+        return self._config.getint('Network','edu_type_dims')
+    @property
     def dropout_emb(self):
         return self._config.getfloat('Network','dropout_emb')
     @property

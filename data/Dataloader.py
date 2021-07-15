@@ -162,12 +162,19 @@ def batch_doc_variable(onebatch, vocab, config, token_helper):
 
 def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
 
+    batch_size = len(onebatch)
+    edu_lengths = [len(instance[0].EDUs) for instance in onebatch]
+    max_edu_num = max(edu_lengths)
+
     batch_EDU_index_list = []
+    batch_EDU_types = np.zeros([batch_size, max_edu_num], dtype=np.long)
     for idx, instance in enumerate(onebatch):
         EDU_texts = []
         for idy, EDU in enumerate(instance[0].EDUs):
             text = " ".join(EDU.words)
             EDU_texts.append(text)
+            EDU_id = vocab.EDUtype2id(onebatch[idx][0].EDUs[idy].type)
+            batch_EDU_types[idx, idy] = EDU_id
         EDU_tokens_list = token_helper.batch_text2tokens(EDU_texts)
         start = 0
         end = 0
@@ -181,9 +188,6 @@ def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
             EDU_index_list.append(index_list)
         batch_EDU_index_list.append(EDU_index_list)
 
-    batch_size = len(onebatch)
-    edu_lengths = [len(instance[0].EDUs) for instance in onebatch]
-    max_edu_num = max(edu_lengths)
     max_EDU_tok_len = max([len(EDU_tokens) for EDU_tokens_list in batch_EDU_index_list for EDU_tokens in EDU_tokens_list])
 
     EDU_offset_index = np.zeros([batch_size, max_edu_num, max_EDU_tok_len], dtype=np.long)
@@ -196,7 +200,8 @@ def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
 
     EDU_offset_index = torch.tensor(EDU_offset_index)
     batch_denominator = torch.tensor(batch_denominator)
-    return EDU_offset_index, batch_denominator, edu_lengths
+    batch_EDU_types = torch.tensor(batch_EDU_types)
+    return EDU_offset_index, batch_denominator, edu_lengths, batch_EDU_types
 
 
 def batch_bert_variable(onebatch, vocab, config, token_helper):

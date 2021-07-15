@@ -5,7 +5,7 @@ class Decoder(nn.Module):
     def __init__(self, vocab, config):
         super(Decoder, self).__init__()
         self.config = config
-        self.nonlinear1 = NonLinear(input_size=(config.lstm_hiddens * 2  + config.word_dims) * 4, ## four feats
+        self.nonlinear1 = NonLinear(input_size=(config.lstm_hiddens * 2  + config.word_dims + config.edu_type_dims) * 4, ## four feats
                                     hidden_size=config.hidden_size,
                                     activation=nn.Tanh())
 
