@@ -243,6 +243,7 @@ if __name__ == '__main__':
     pickle.dump(vocab, open(config.save_vocab_path, 'wb'))
 
     print(EDULSTM)
+    print(typeEmb)
     print(dec)
     if config.use_cuda:
         torch.backends.cudnn.enabled = True
