@@ -26,14 +26,14 @@ def batch_slice(data, batch_size):
 
         yield sentences
 
-def get_gold_actions(data, vocab):
+def get_gold_actions(data, vocab, config):
     for doc in data:
         for action in doc.gold_actions:
             if action.is_reduce():
                 action.label = vocab.rel2id(action.label_str)
     all_actions = []
     states = []
-    for idx in range(1024):
+    for idx in range(config.max_state_len):
         states.append(State())
     all_feats = []
     S = Metric()
@@ -64,10 +64,10 @@ def get_gold_actions(data, vocab):
         assert S.bIdentical() and N.bIdentical() and R.bIdentical() and F.bIdentical()
     return all_feats, all_actions
 
-def get_gold_candid(data, vocab):
+def get_gold_candid(data, vocab, config):
     states = []
     all_candid = []
-    for idx in range(0, 1024):
+    for idx in range(0, config.max_state_len):
         states.append(State())
     for doc in data:
         start = states[0]
@@ -158,8 +158,7 @@ def batch_doc_variable(onebatch, vocab, config, token_helper):
     doc_input_ids = torch.tensor(doc_input_ids)
     doc_token_type_ids = torch.tensor(doc_token_type_ids)
     doc_attention_mask = torch.tensor(doc_attention_mask)
-    return doc_input_ids, doc_token_type_ids, doc_attention_mask
-
+    return (doc_input_ids, doc_token_type_ids, doc_attention_mask)
 
 def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
 
@@ -197,7 +196,7 @@ def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
 
     EDU_offset_index = torch.tensor(EDU_offset_index)
     batch_denominator = torch.tensor(batch_denominator)
-    return EDU_offset_index, batch_denominator
+    return EDU_offset_index, batch_denominator, edu_lengths
 
 
 def batch_bert_variable(onebatch, vocab, config, token_helper):
@@ -241,11 +240,8 @@ def batch_bert_variable(onebatch, vocab, config, token_helper):
                 batch_denominator[idx, idy, idz] = 1 / tok_len
             batch_cls_index[idx, idy] = len(input_ids_list[idx][idy]) - 1
 
-    batch_input_ids = torch.tensor(batch_input_ids)
-    batch_token_type_ids = torch.tensor(batch_token_type_ids)
-    batch_attention_mask = torch.tensor(batch_attention_mask)
     batch_cls_index = torch.tensor(batch_cls_index)
     batch_denominator = torch.tensor(batch_denominator)
 
-    return batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, batch_denominator
+    return edu_lengths, batch_cls_index, batch_denominator
 

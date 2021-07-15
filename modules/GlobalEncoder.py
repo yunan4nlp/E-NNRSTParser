@@ -28,9 +28,7 @@ class GlobalEncoder(nn.Module):
 
     def forward(self,
                 doc_input_ids, doc_token_type_ids, doc_attention_mask,
-                EDU_offset_index,
-                input_ids, token_type_ids, attention_mask,
-                batch_cls_index, batch_denominator):
+                EDU_offset_index, batch_denominator):
 
         _, _, doc_encoder_outputs = \
             self.auto_extractor(doc_input_ids, doc_token_type_ids, doc_attention_mask)

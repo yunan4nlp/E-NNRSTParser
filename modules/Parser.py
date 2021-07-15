@@ -14,7 +14,7 @@ class DisParser(object):
         for idx in range(config.test_batch_size):
             self.batch_states.append([])
             self.step.append(0)
-            for idy in range(1024):
+            for idy in range(config.max_state_len):
                 self.batch_states[idx].append(State())
 
     def train(self):
@@ -30,29 +30,25 @@ class DisParser(object):
         self.training = False
 
     def encode(self,
-               doc_input_ids, doc_token_type_ids, doc_attention_mask,
+               doc_inputs,
                EDU_offset_index,
-               batch_input_ids, batch_token_type_ids, batch_attention_mask,
-               edu_lengths, batch_cls_index, batch_denominator):
+               batch_denominator,
+               edu_lengths 
+               ):
 
+        doc_input_ids, doc_token_type_ids, doc_attention_mask = doc_inputs
         if self.use_cuda:
             doc_input_ids = doc_input_ids.cuda()
             doc_token_type_ids = doc_token_type_ids.cuda()
             doc_attention_mask = doc_attention_mask.cuda()
 
             EDU_offset_index = EDU_offset_index.cuda()
-
-            batch_input_ids = batch_input_ids.cuda()
-            batch_token_type_ids = batch_token_type_ids.cuda()
-            batch_attention_mask = batch_attention_mask.cuda()
-            batch_cls_index = batch_cls_index.cuda()
             batch_denominator = batch_denominator.cuda()
 
         bert_represents = self.global_encoder(
             doc_input_ids, doc_token_type_ids, doc_attention_mask,
             EDU_offset_index,
-            batch_input_ids, batch_token_type_ids, batch_attention_mask,
-            batch_cls_index, batch_denominator)
+            batch_denominator)
 
         edu_hiddens = self.EDULSTM(bert_represents, edu_lengths)
 

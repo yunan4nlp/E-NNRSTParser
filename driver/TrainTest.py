@@ -45,13 +45,10 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
         overall_action_correct,  overall_total_action = 0, 0
         for onebatch in data_iter(train_inst, config.train_batch_size, True):
 
-            doc_input_ids, doc_token_type_ids, doc_attention_mask = \
+            doc_inputs = \
                 batch_doc_variable(onebatch, vocab, config, token_helper)
 
-            EDU_offset_index, batch_denominator = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
-
-            batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, _ = \
-                batch_bert_variable(onebatch, vocab, config, token_helper)
+            EDU_offset_index, batch_denominator, edu_lengths = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
 
             batch_feats, batch_actions, batch_action_indexes, batch_candidate = \
                 actions_variable(onebatch, vocab)
@@ -60,10 +57,8 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
             #with torch.autograd.profiler.profile() as prof:
             with autocast():
                 parser.encode(
-                    doc_input_ids, doc_token_type_ids, doc_attention_mask,
-                    EDU_offset_index,
-                    batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
-                    batch_cls_index, batch_denominator
+                    doc_inputs,
+                    EDU_offset_index, batch_denominator, edu_lengths
                 )
                 predict_actions = parser.decode(onebatch, batch_feats, batch_candidate, vocab)
                 loss = parser.compute_loss(batch_action_indexes)
@@ -148,21 +143,16 @@ def predict(data, parser, vocab, config, tokenizer, outputFile):
     parser.eval()
     outf = open(outputFile, mode='w', encoding='utf8')
     for onebatch in data_iter(data, config.test_batch_size, False):
-        doc_input_ids, doc_token_type_ids, doc_attention_mask = \
-            batch_doc_variable(onebatch, vocab, config, token_helper)
+        doc_inputs = batch_doc_variable(onebatch, vocab, config, token_helper)
 
-        EDU_offset_index, batch_denominator = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
+        EDU_offset_index, batch_denominator, edu_lengths = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
 
-        batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, _ = \
-            batch_bert_variable(onebatch, vocab, config, token_helper)
 
         # with torch.autograd.profiler.profile() as prof:
         with autocast():
             parser.encode(
-                doc_input_ids, doc_token_type_ids, doc_attention_mask,
-                EDU_offset_index,
-                batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
-                batch_cls_index, batch_denominator
+                doc_inputs,
+                EDU_offset_index, batch_denominator, edu_lengths
             )
             parser.decode(onebatch, None, None, vocab)
         batch_size = len(onebatch)
@@ -189,10 +179,6 @@ def predict(data, parser, vocab, config, tokenizer, outputFile):
 if __name__ == '__main__':
     print("Process ID {}, Process Parent ID {}".format(os.getpid(), os.getppid()))
 
-    random.seed(666)
-    np.random.seed(666)
-    torch.cuda.manual_seed(666)
-    torch.manual_seed(666)
 
     # torch version
     print("Torch Version: ", torch.__version__)
@@ -211,6 +197,11 @@ if __name__ == '__main__':
     args, extra_args = argparser.parse_known_args()
     config = Configurable(args.config_file, extra_args)
 
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.cuda.manual_seed(config.seed)
+    torch.manual_seed(config.seed)
+
     train_data = read_corpus(config.train_file)
     dev_data = read_corpus(config.dev_file)
     test_data = read_corpus(config.test_file)
@@ -224,11 +215,11 @@ if __name__ == '__main__':
     print("\nGPU using status: ", config.use_cuda)
 
     start_a = time.time()
-    train_feats, train_actions = get_gold_actions(train_data, vocab)
+    train_feats, train_actions = get_gold_actions(train_data, vocab, config)
     print("Get Action Time: ", time.time() - start_a)
     vocab.create_action_table(train_actions)
 
-    train_candidate = get_gold_candid(train_data, vocab)
+    train_candidate = get_gold_candid(train_data, vocab, config)
 
     train_insts = inst(train_data, train_feats, train_actions, train_candidate)
     dev_insts = inst(dev_data)
