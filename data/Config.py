@@ -27,8 +27,8 @@ class Configurable(object):
     def pretrained_embeddings_file(self):
         return self._config.get('Data','pretrained_embeddings_file')
     @property
-    def bert_dir(self):
-        return self._config.get('Data','bert_dir')
+    def xlnet_dir(self):
+        return self._config.get('Data','xlnet_dir')
     @property
     def data_dir(self):
         return self._config.get('Data','data_dir')
@@ -103,6 +103,9 @@ class Configurable(object):
     @property
     def end_layer(self):
         return self._config.getint('Network', 'end_layer')
+    @property
+    def tune_start_layer(self):
+        return self._config.getint('Network', 'tune_start_layer')
 
     @property
     def L2_REG(self):
@@ -110,6 +113,9 @@ class Configurable(object):
     @property
     def learning_rate(self):
         return self._config.getfloat('Optimizer','learning_rate')
+    @property
+    def plm_learning_rate(self):
+        return self._config.getfloat('Optimizer','plm_learning_rate')
     @property
     def decay(self):
         return self._config.getfloat('Optimizer','decay')

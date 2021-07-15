@@ -26,14 +26,14 @@ def batch_slice(data, batch_size):
 
         yield sentences
 
-def get_gold_actions(data, vocab, config):
+def get_gold_actions(data, vocab):
     for doc in data:
         for action in doc.gold_actions:
             if action.is_reduce():
                 action.label = vocab.rel2id(action.label_str)
     all_actions = []
     states = []
-    for idx in range(config.max_state_len):
+    for idx in range(1024):
         states.append(State())
     all_feats = []
     S = Metric()
@@ -64,10 +64,10 @@ def get_gold_actions(data, vocab, config):
         assert S.bIdentical() and N.bIdentical() and R.bIdentical() and F.bIdentical()
     return all_feats, all_actions
 
-def get_gold_candid(data, vocab, config):
+def get_gold_candid(data, vocab):
     states = []
     all_candid = []
-    for idx in range(0, config.max_state_len):
+    for idx in range(0, 1024):
         states.append(State())
     for doc in data:
         start = states[0]
@@ -134,159 +134,83 @@ def actions_variable(batch, vocab):
         batch_candidate.append(candidate)
     return batch_feats, batch_actions, batch_action_indexes, batch_candidate
 
-def batch_data_variable(batch, vocab, config):
-    batch_size = len(batch)
-    max_edu_num = max([len(data[0].EDUs) for data in batch])
-    max_edu_len = max([len(edu.words) for data in batch for edu in data[0].EDUs])
-    if max_edu_len > config.max_edu_len: max_edu_len = config.max_edu_len
+def batch_doc_variable(onebatch, vocab, config, token_helper):
+    inst_texts = []
+    for idx, instance in enumerate(onebatch):
+        doc_text = " ".join(instance[0].words)
+        inst_texts.append(doc_text)
+    doc_input_ids_list, doc_token_type_ids_list, doc_attention_mask_list = token_helper.batch_bert_id(inst_texts, add_special_tokens=False)
 
-    edu_words = np.zeros((batch_size, max_edu_num, max_edu_len), dtype=int)
-    edu_extwords = np.zeros((batch_size, max_edu_num, max_edu_len), dtype=int)
-    edu_tags = np.zeros((batch_size, max_edu_num, max_edu_len), dtype=int)
-    word_mask = np.zeros((batch_size, max_edu_num, max_edu_len), dtype=int)
-    word_denominator = np.ones((batch_size, max_edu_num), dtype=int) * -1
-    edu_mask = np.zeros((batch_size, max_edu_num), dtype=int)
-    edu_types = np.zeros((batch_size, max_edu_num), dtype=int)
+    doc_tok_lengths = [len(input_ids) for input_ids in doc_input_ids_list]
+    max_doc_tok_len = max(doc_tok_lengths)
+    batch_size = len(onebatch)
 
-    for idx in range(batch_size):
-        doc = batch[idx][0]
-        EDUs = doc.EDUs
-        edu_num = len(EDUs)
-        for idy in range(edu_num):
-            edu = EDUs[idy]
-            edu_types[idx, idy] = vocab.EDUtype2id(edu.type)
-            edu_len = len(edu.words)
-            if edu_len > config.max_edu_len: edu_len = config.max_edu_len
-            edu_mask[idx, idy] = 1
-            word_denominator[idx, idy] = edu_len
-            #assert edu_len == len(edu.tags)
-            for idz in range(edu_len):
-                word = edu.words[idz]
-                tag = edu.tags[idz]
-                edu_words[idx, idy, idz] = vocab.word2id(word)
-                #edu_extwords[idx, idy, idz] = vocab.extword2id(word)
-                tag_id = vocab.tag2id(tag)
-                edu_tags[idx, idy, idz] = tag_id
-                word_mask[idx, idy, idz] = 1
+    doc_input_ids = np.ones([batch_size, max_doc_tok_len], dtype=np.long) * token_helper.pad_token_id()
+    doc_token_type_ids = np.zeros([batch_size, max_doc_tok_len], dtype=np.long)
+    doc_attention_mask = np.zeros([batch_size, max_doc_tok_len], dtype=np.long)
 
-    edu_words = torch.tensor(edu_words, dtype=torch.long)
-    edu_extwords = torch.tensor(edu_extwords, dtype=torch.long)
-    edu_tags = torch.tensor(edu_tags, dtype=torch.long)
-    word_mask = torch.tensor(word_mask, dtype=torch.float)
-    word_denominator = torch.tensor(word_denominator, dtype=torch.float)
-    edu_mask = torch.tensor(edu_mask, dtype=torch.float)
-    edu_types = torch.tensor(edu_types, dtype=torch.long)
-    return edu_words, edu_extwords, edu_tags, word_mask, edu_mask, word_denominator, edu_types
+    for idx, input_ids in enumerate(doc_input_ids_list):
+        for idy, id in enumerate(input_ids):
+            doc_input_ids[idx, idy] = doc_input_ids_list[idx][idy]
+            doc_token_type_ids[idx, idy] = doc_token_type_ids_list[idx][idy]
+            doc_attention_mask[idx, idy] = doc_attention_mask_list[idx][idy]
 
-def batch_sent2span_offset(batch, config):
-    batch_size = len(batch)
-    max_sent_len = max([len(sent) for data in batch for sent in data[0].sentences])
-    max_edu_num = max([len(data[0].EDUs) for data in batch])
-    max_edu_len = max([len(edu.words) for data in batch for edu in data[0].EDUs])
-    if config.max_edu_len < max_edu_len: max_edu_len = config.max_edu_len
-    index = np.ones((batch_size, max_edu_num, max_edu_len), dtype=int) * (max_sent_len)
-    for idx in range(batch_size):
-        data = batch[idx]
-        sentences = data[0].sentences
-        sent_index = []
-        for sent_idx, sentence in enumerate(sentences):
-            sent_len = len(sentence)
-            for sent_idy in range(sent_len):
-                sent_index.append(sent_idx * (max_sent_len + 1) + sent_idy)
-        edus = data[0].EDUs
-        id = 0
-        edu_num = len(edus)
-        for idy in range(edu_num):
-            edu = edus[idy]
-            edu_len = len(edu.words[:config.max_edu_len])
-            for idz in range(edu_len):
-                index[idx, idy, idz] = sent_index[id]
-                id += 1
-    index = torch.from_numpy(index).view(batch_size, max_edu_num, max_edu_len)
-    return index
-
-def batch_pretrain_variable_sent_level(batch, vocab, config, tokenizer):
-    batch_size = len(batch)
-    max_bert_len = -1
-    max_sent_num = max([len(data[0].sentences) for data in batch])
-    max_sent_len = max([len(sent) for data in batch for sent in data[0].sentences])
-    #if config.max_sent_len < max_sent_len:max_sent_len = config.max_sent_len
-    batch_bert_indices = []
-    batch_segments_ids = []
-    batch_piece_ids = []
-    for data in batch:
-        sents = data[0].sentences
-        doc_bert_indices = []
-        doc_semgents_ids = []
-        doc_piece_ids = []
-        for sent in sents:
-            sent = sent[:max_sent_len]
-            bert_indice, segments_id, piece_id = tokenizer.bert_ids(' '.join(sent))
-            doc_bert_indices.append(bert_indice)
-            doc_semgents_ids.append(segments_id)
-            doc_piece_ids.append(piece_id)
-            assert len(piece_id) == len(sent)
-            assert len(bert_indice) == len(segments_id)
-            bert_len = len(bert_indice)
-            if bert_len > max_bert_len: max_bert_len = bert_len
-        batch_bert_indices.append(doc_bert_indices)
-        batch_segments_ids.append(doc_semgents_ids)
-        batch_piece_ids.append(doc_piece_ids)
-    bert_indice_input = np.zeros((batch_size, max_sent_num, max_bert_len), dtype=int)
-    bert_mask = np.zeros((batch_size, max_sent_num, max_bert_len), dtype=int)
-    bert_segments_ids = np.zeros((batch_size, max_sent_num, max_bert_len), dtype=int)
-    bert_piece_ids = np.zeros((batch_size, max_sent_num, max_sent_len, max_bert_len), dtype=float)
-
-    for idx in range(batch_size):
-        doc_bert_indices = batch_bert_indices[idx]
-        doc_semgents_ids = batch_segments_ids[idx]
-        doc_piece_ids = batch_piece_ids[idx]
-        sent_num = len(doc_bert_indices)
-        assert sent_num == len(doc_semgents_ids)
-        for idy in range(sent_num):
-            bert_indice = doc_bert_indices[idy]
-            segments_id = doc_semgents_ids[idy]
-            bert_len = len(bert_indice)
-            piece_id = doc_piece_ids[idy]
-            sent_len = len(piece_id)
-            assert sent_len <= bert_len
-            for idz in range(bert_len):
-                bert_indice_input[idx, idy, idz] = bert_indice[idz]
-                bert_segments_ids[idx, idy, idz] = segments_id[idz]
-                bert_mask[idx, idy, idz] = 1
-            for idz in range(sent_len):
-                for sid, piece in enumerate(piece_id):
-                    avg_score = 1.0 / (len(piece))
-                    for tid in piece:
-                        bert_piece_ids[idx, idy, sid, tid] = avg_score
+    doc_input_ids = torch.tensor(doc_input_ids)
+    doc_token_type_ids = torch.tensor(doc_token_type_ids)
+    doc_attention_mask = torch.tensor(doc_attention_mask)
+    return doc_input_ids, doc_token_type_ids, doc_attention_mask
 
 
-    bert_indice_input = torch.from_numpy(bert_indice_input)
-    bert_segments_ids = torch.from_numpy(bert_segments_ids)
-    bert_piece_ids = torch.from_numpy(bert_piece_ids).type(torch.FloatTensor)
-    bert_mask = torch.from_numpy(bert_mask)
+def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
 
-    return bert_indice_input, bert_segments_ids, bert_piece_ids, bert_mask
+    batch_EDU_index_list = []
+    for idx, instance in enumerate(onebatch):
+        EDU_texts = []
+        for idy, EDU in enumerate(instance[0].EDUs):
+            text = " ".join(EDU.words)
+            EDU_texts.append(text)
+        EDU_tokens_list = token_helper.batch_text2tokens(EDU_texts)
+        start = 0
+        end = 0
+        EDU_index_list = []
+        for idy, EDU_tokens in enumerate(EDU_tokens_list):
+            end += len(EDU_tokens)
+            index_list = []
+            for idz in range(start, end):
+                index_list.append(idz)
+            start += len(EDU_tokens)
+            EDU_index_list.append(index_list)
+        batch_EDU_index_list.append(EDU_index_list)
+
+    batch_size = len(onebatch)
+    edu_lengths = [len(instance[0].EDUs) for instance in onebatch]
+    max_edu_num = max(edu_lengths)
+    max_EDU_tok_len = max([len(EDU_tokens) for EDU_tokens_list in batch_EDU_index_list for EDU_tokens in EDU_tokens_list])
+
+    EDU_offset_index = np.zeros([batch_size, max_edu_num, max_EDU_tok_len], dtype=np.long)
+    batch_denominator = np.zeros([batch_size, max_edu_num, max_EDU_tok_len], dtype=np.float32)
+    for idx, EDU_tokens_list in enumerate(batch_EDU_index_list):
+        for idy, EDU_tokens in enumerate(EDU_tokens_list):
+            for idz, tok in enumerate(EDU_tokens):
+                EDU_offset_index[idx, idy, idz] = batch_EDU_index_list[idx][idy][idz]
+                batch_denominator[idx, idy, idz] = float(1 / len(batch_EDU_index_list[idx][idy]))
+
+    EDU_offset_index = torch.tensor(EDU_offset_index)
+    batch_denominator = torch.tensor(batch_denominator)
+    return EDU_offset_index, batch_denominator
 
 
-def batch_biEDU_bert_variable(onebatch, vocab, config, token_helper):
+def batch_bert_variable(onebatch, vocab, config, token_helper):
     input_ids_list = []
     token_type_ids_list = []
     attention_mask_list = []
 
     for idx, instance in enumerate(onebatch):
-        inst_biEDU_texts = []
+        inst_texts = []
         for idy, EDU in enumerate(instance[0].EDUs):
             text = " ".join(EDU.words[:config.max_edu_len])
-
-            if idy + 1 < len(instance[0].EDUs):
-                next_EDU = instance[0].EDUs[idy + 1]
-                next_text = " ".join(next_EDU.words[:config.max_edu_len])
-            else:
-                next_text = token_helper.tokenizer.pad_token
-
-            inst_biEDU_texts.append((text, next_text))
-        input_ids, token_type_ids, attention_mask = token_helper.batch_biEDU_bert_id(inst_biEDU_texts)
+            inst_texts.append(text)
+        input_ids, token_type_ids, attention_mask = token_helper.batch_bert_id(inst_texts)
         input_ids_list.append(input_ids)
         token_type_ids_list.append(token_type_ids)
         attention_mask_list.append(attention_mask)
@@ -295,11 +219,15 @@ def batch_biEDU_bert_variable(onebatch, vocab, config, token_helper):
 
     edu_lengths = [len(instance[0].EDUs) for instance in onebatch]
     max_edu_num = max(edu_lengths)
-    max_tok_len = max([len(token_ids) for input_ids in input_ids_list for token_ids in input_ids])
+    tok_lengths = [len(token_ids) for input_ids in input_ids_list for token_ids in input_ids]
+    max_tok_len = max(tok_lengths)
 
     batch_input_ids = np.ones([batch_size, max_edu_num, max_tok_len], dtype=np.long) * token_helper.pad_token_id()
     batch_token_type_ids = np.zeros([batch_size, max_edu_num, max_tok_len], dtype=np.long)
     batch_attention_mask = np.zeros([batch_size, max_edu_num, max_tok_len], dtype=np.long)
+
+    batch_denominator = np.zeros([batch_size, max_edu_num, max_tok_len], dtype=np.float32)
+    batch_cls_index = np.zeros([batch_size, max_edu_num], dtype=np.long)
 
     for idx in range(batch_size):
         edu_num = len(input_ids_list[idx])
@@ -310,9 +238,14 @@ def batch_biEDU_bert_variable(onebatch, vocab, config, token_helper):
                 batch_token_type_ids[idx, idy, idz] = token_type_ids_list[idx][idy][idz]
                 batch_attention_mask[idx, idy, idz] = attention_mask_list[idx][idy][idz]
 
+                batch_denominator[idx, idy, idz] = 1 / tok_len
+            batch_cls_index[idx, idy] = len(input_ids_list[idx][idy]) - 1
+
     batch_input_ids = torch.tensor(batch_input_ids)
     batch_token_type_ids = torch.tensor(batch_token_type_ids)
     batch_attention_mask = torch.tensor(batch_attention_mask)
+    batch_cls_index = torch.tensor(batch_cls_index)
+    batch_denominator = torch.tensor(batch_denominator)
 
-    return batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths
+    return batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, batch_denominator
 

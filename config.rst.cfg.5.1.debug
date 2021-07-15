@@ -1,5 +1,5 @@
 [Data]
-bert_dir = ../bert-base-uncased
+xlnet_dir = ../xlnet-base-cased
 data_dir = experiments/rst
 train_file = %(data_dir)s/sample.txt
 dev_file = %(data_dir)s/sample.txt
@@ -31,10 +31,13 @@ output_hidden_states = True
 output_attentions = False
 start_layer = 8
 end_layer = 12
+tune_start_layer = 8
+
 
 [Optimizer]
 L2_REG = 1e-6
 learning_rate = 2e-3
+plm_learning_rate = 2e-5
 decay = .75
 decay_steps = 10
 beta_1 = .9

@@ -8,20 +8,27 @@ import time
 from modules.Parser import *
 from modules.EDULSTM import *
 from modules.Decoder import *
-from modules.BertModel import *
-from data.BertTokenHelper import *
+from modules.XLNetTune import *
+from data.TokenHelper import *
 from modules.GlobalEncoder import *
 from modules.Optimizer import *
 import pickle
+
 from torch.cuda.amp import autocast as autocast
 from torch.cuda.amp.grad_scaler import GradScaler
 
 
 def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
 
-    model_param = list(parser.global_encoder.parameters()) + \
-                  list(parser.EDULSTM.parameters()) + \
-                  list(parser.dec.parameters())
+    auto_param = list(parser.global_encoder.auto_extractor.parameters())
+
+    parser_param = list(parser.global_encoder.mlp_words.parameters()) + \
+                   list(parser.global_encoder.rescale.parameters()) + \
+                   list(parser.EDULSTM.parameters()) + \
+                   list(parser.dec.parameters())
+
+    model_param = [{'params': auto_param, 'lr': config.plm_learning_rate},
+                   {'params': parser_param, 'lr': config.learning_rate}]
 
     model_optimizer = Optimizer(model_param, config, config.learning_rate)
     scaler = GradScaler()
@@ -38,8 +45,13 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
         overall_action_correct,  overall_total_action = 0, 0
         for onebatch in data_iter(train_inst, config.train_batch_size, True):
 
-            batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths = \
-                batch_biEDU_bert_variable(onebatch, vocab, config, token_helper)
+            doc_input_ids, doc_token_type_ids, doc_attention_mask = \
+                batch_doc_variable(onebatch, vocab, config, token_helper)
+
+            EDU_offset_index, batch_denominator = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
+
+            batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, _ = \
+                batch_bert_variable(onebatch, vocab, config, token_helper)
 
             batch_feats, batch_actions, batch_action_indexes, batch_candidate = \
                 actions_variable(onebatch, vocab)
@@ -47,7 +59,12 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
             parser.train()
             #with torch.autograd.profiler.profile() as prof:
             with autocast():
-                parser.encode(batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths)
+                parser.encode(
+                    doc_input_ids, doc_token_type_ids, doc_attention_mask,
+                    EDU_offset_index,
+                    batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
+                    batch_cls_index, batch_denominator
+                )
                 predict_actions = parser.decode(onebatch, batch_feats, batch_candidate, vocab)
                 loss = parser.compute_loss(batch_action_indexes)
                 loss = loss / config.update_every
@@ -62,13 +79,13 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
             during_time = float(time.time() - start_time)
             acc = overall_action_correct / overall_total_action
             #acc = 0
-            print("Step:%d, Iter:%d, batch:%d, time:%.2f, acc:%.2f, loss:%.8f"
-                  %(global_step, iter, batch_iter,  during_time, acc, loss_value))
+            print("Step:%d, Iter:%d, batch:%d, time:%.2f, acc:%.2f, loss:%.8f" \
+                %(global_step, iter, batch_iter,  during_time, acc, loss_value))
             batch_iter += 1
 
             if batch_iter % config.update_every == 0 or batch_iter == batch_num:
                 scaler.unscale_(model_optimizer.optim)
-                nn.utils.clip_grad_norm_(model_param, max_norm=config.clip)
+                nn.utils.clip_grad_norm_(auto_param + parser_param, max_norm=config.clip)
 
                 scaler.step(model_optimizer.optim)
                 scaler.update()
@@ -92,16 +109,18 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
                     print("Exceed best Full F-score: history = %.2f, current = %.2f" % (best_FF, dev_FF))
                     best_FF = dev_FF
 
+                    '''
                     if config.save_after >= 0 and iter >= config.save_after:
                         discoure_parser_model = {
-                            "mlp_words": parser.global_encoder.mlp_words.state_dict(),
-                            "rescale": parser.global_encoder.rescale.state_dict(),
+                            "pwordEnc": parser.pwordEnc.state_dict(),
+                            "wordLSTM": parser.wordLSTM.state_dict(),
+                            "sent2span": parser.sent2span.state_dict(),
                             "EDULSTM": parser.EDULSTM.state_dict(),
                             "dec": parser.dec.state_dict()
-                        }
-
-                        torch.save(discoure_parser_model, config.save_model_path)
-                        print('Saving model to ', config.save_model_path)
+                            }
+                        torch.save(discoure_parser_model, config.save_model_path + "." + str(global_step))
+                        print('Saving model to ', config.save_model_path + "." + str(global_step))
+                    '''
 
 def evaluate(gold_file, predict_file):
     gold_data = read_corpus(gold_file)
@@ -124,17 +143,27 @@ def evaluate(gold_file, predict_file):
     F.print()
     return F.getAccuracy()
 
-def predict(data, parser, vocab, config, token_helper, outputFile):
+def predict(data, parser, vocab, config, tokenizer, outputFile):
     start = time.time()
     parser.eval()
     outf = open(outputFile, mode='w', encoding='utf8')
     for onebatch in data_iter(data, config.test_batch_size, False):
-        batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths = \
-            batch_biEDU_bert_variable(onebatch, vocab, config, token_helper)
+        doc_input_ids, doc_token_type_ids, doc_attention_mask = \
+            batch_doc_variable(onebatch, vocab, config, token_helper)
+
+        EDU_offset_index, batch_denominator = batch_doc2edu_variable(onebatch, vocab, config, token_helper)
+
+        batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths, batch_cls_index, _ = \
+            batch_bert_variable(onebatch, vocab, config, token_helper)
 
         # with torch.autograd.profiler.profile() as prof:
         with autocast():
-            parser.encode(batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths)
+            parser.encode(
+                doc_input_ids, doc_token_type_ids, doc_attention_mask,
+                EDU_offset_index,
+                batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
+                batch_cls_index, batch_denominator
+            )
             parser.decode(onebatch, None, None, vocab)
         batch_size = len(onebatch)
         for idx in range(batch_size):
@@ -160,6 +189,11 @@ def predict(data, parser, vocab, config, token_helper, outputFile):
 if __name__ == '__main__':
     print("Process ID {}, Process Parent ID {}".format(os.getpid(), os.getppid()))
 
+    random.seed(666)
+    np.random.seed(666)
+    torch.cuda.manual_seed(666)
+    torch.manual_seed(666)
+
     # torch version
     print("Torch Version: ", torch.__version__)
 
@@ -177,12 +211,6 @@ if __name__ == '__main__':
     args, extra_args = argparser.parse_known_args()
     config = Configurable(args.config_file, extra_args)
 
-    random.seed(config.seed)
-    np.random.seed(config.seed)
-    torch.cuda.manual_seed(config.seed)
-    torch.manual_seed(config.seed)
-
-
     train_data = read_corpus(config.train_file)
     dev_data = read_corpus(config.dev_file)
     test_data = read_corpus(config.test_file)
@@ -196,11 +224,11 @@ if __name__ == '__main__':
     print("\nGPU using status: ", config.use_cuda)
 
     start_a = time.time()
-    train_feats, train_actions = get_gold_actions(train_data, vocab, config)
+    train_feats, train_actions = get_gold_actions(train_data, vocab)
     print("Get Action Time: ", time.time() - start_a)
     vocab.create_action_table(train_actions)
 
-    train_candidate = get_gold_candid(train_data, vocab, config)
+    train_candidate = get_gold_candid(train_data, vocab)
 
     train_insts = inst(train_data, train_feats, train_actions, train_candidate)
     dev_insts = inst(dev_data)
@@ -210,12 +238,12 @@ if __name__ == '__main__':
     print("dev num: ", len(dev_insts))
     print("test num: ", len(test_insts))
 
-    print('Load pretrained encoder.....')
-    token_helper = BertTokenHelper(config.bert_dir)
-    bert_extractor = BertExtractor(config, token_helper)
+    print('Load pretrained encoder: ', config.xlnet_dir)
+    token_helper = TokenHelper(config.xlnet_dir)
+    auto_extractor = AutoModelExtractor(config, token_helper)
     print('Load pretrained encoder ok')
 
-    global_encoder = GlobalEncoder(vocab, config, bert_extractor)
+    global_encoder = GlobalEncoder(vocab, config, auto_extractor)
     EDULSTM = EDULSTM(vocab, config)
     dec = Decoder(vocab, config)
     pickle.dump(vocab, open(config.save_vocab_path, 'wb'))
