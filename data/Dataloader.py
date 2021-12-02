@@ -136,9 +136,12 @@ def actions_variable(batch, vocab):
 
 def batch_doc_variable(onebatch, vocab, config, token_helper):
     inst_texts = []
+
     for idx, instance in enumerate(onebatch):
-        doc_text = " ".join(instance[0].words)
+        edu_texts = [" ".join(edu.words[:config.max_edu_len]) for edu in instance[0].EDUs]
+        doc_text = " ".join(edu_texts)
         inst_texts.append(doc_text)
+
     doc_input_ids_list, doc_token_type_ids_list, doc_attention_mask_list = token_helper.batch_bert_id(inst_texts, add_special_tokens=False)
 
     doc_tok_lengths = [len(input_ids) for input_ids in doc_input_ids_list]
@@ -171,7 +174,7 @@ def batch_doc2edu_variable(onebatch, vocab, config, token_helper):
     for idx, instance in enumerate(onebatch):
         EDU_texts = []
         for idy, EDU in enumerate(instance[0].EDUs):
-            text = " ".join(EDU.words)
+            text = " ".join(EDU.words[:config.max_edu_len])
             EDU_texts.append(text)
             EDU_id = vocab.EDUtype2id(onebatch[idx][0].EDUs[idy].type)
             batch_EDU_types[idx, idy] = EDU_id

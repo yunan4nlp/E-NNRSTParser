@@ -165,3 +165,6 @@ class Configurable(object):
     @property
     def seed(self):
         return self._config.getint('Run','seed')
+    @property
+    def max_token_len(self):
+        return self._config.getint('Run','max_token_len')

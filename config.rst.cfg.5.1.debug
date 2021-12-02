@@ -55,3 +55,4 @@ update_every = 1
 max_edu_len = 100000
 max_state_len = 1024
 seed = 111
+max_token_len = 64
