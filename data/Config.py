@@ -49,6 +49,9 @@ class Configurable(object):
     def save_dir(self):
         return self._config.get('Save','save_dir')
     @property
+    def xlnet_save_dir(self):
+        return self._config.get('Save','xlnet_save_dir')
+    @property
     def config_file(self):
         return self._config.get('Save','config_file')
     @property

@@ -104,18 +104,18 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
                     print("Exceed best Full F-score: history = %.2f, current = %.2f" % (best_FF, dev_FF))
                     best_FF = dev_FF
 
-                    '''
                     if config.save_after >= 0 and iter >= config.save_after:
+                        parser.global_encoder.auto_extractor.auto_model.save_pretrained(config.xlnet_save_dir)
+                        token_helper.tokenizer.save_pretrained(config.xlnet_save_dir)
                         discoure_parser_model = {
-                            "pwordEnc": parser.pwordEnc.state_dict(),
-                            "wordLSTM": parser.wordLSTM.state_dict(),
-                            "sent2span": parser.sent2span.state_dict(),
+                            "mlp_words": parser.global_encoder.mlp_words.state_dict(),
+                            "rescale": parser.global_encoder.rescale.state_dict(),
                             "EDULSTM": parser.EDULSTM.state_dict(),
                             "dec": parser.dec.state_dict()
-                            }
-                        torch.save(discoure_parser_model, config.save_model_path + "." + str(global_step))
-                        print('Saving model to ', config.save_model_path + "." + str(global_step))
-                    '''
+                        }
+                        torch.save(discoure_parser_model, config.save_model_path)
+                        print('Saving model to ', config.save_model_path)
+                        
 
 def evaluate(gold_file, predict_file):
     gold_data = read_corpus(gold_file)
