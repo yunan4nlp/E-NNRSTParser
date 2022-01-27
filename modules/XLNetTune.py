@@ -3,10 +3,10 @@ from modules.Layer import *
 
 
 class AutoModelExtractor(nn.Module):
-    def __init__(self, config, tok_helper):
+    def __init__(self, plm_dir, config, tok_helper):
         super(AutoModelExtractor, self).__init__()
         self.config = config
-        self.auto_model = AutoModel.from_pretrained(config.xlnet_dir)
+        self.auto_model = AutoModel.from_pretrained(plm_dir)
         self.auto_model.resize_token_embeddings(len(tok_helper.tokenizer))
 
         self.bert_layers = self.auto_model.config.num_hidden_layers + 1

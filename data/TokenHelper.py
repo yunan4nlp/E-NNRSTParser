@@ -2,8 +2,8 @@ from transformers import AutoTokenizer
 
 
 class TokenHelper(object):
-    def __init__(self, bert_vocab_file):
-        self.tokenizer = AutoTokenizer.from_pretrained(bert_vocab_file)
+    def __init__(self, plm_dir):
+        self.tokenizer = AutoTokenizer.from_pretrained(plm_dir)
         self.key_words = ("[SEP]", "[UNK]", "[PAD]", "[CLS]", "[MASK]")
 
     def basic_tokenize(self, text):

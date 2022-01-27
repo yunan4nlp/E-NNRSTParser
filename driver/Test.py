@@ -8,11 +8,10 @@ from data.Dataloader import *
 from modules.Parser import *
 from modules.EDULSTM import *
 from modules.Decoder import *
-from modules.BertModel import *
-from data.BertTokenHelper import *
+from modules.XLNetTune import *
+from data.TokenHelper import *
 from modules.GlobalEncoder import *
 from modules.Optimizer import *
-from data.BertTokenHelper import *
 from driver.TrainTest import predict, evaluate
 
 if __name__ == '__main__':
@@ -47,11 +46,11 @@ if __name__ == '__main__':
         test_insts = inst(test_data)
 
         print('Load pretrained encoder.....')
-        token_helper = BertTokenHelper(config.bert_dir)
-        bert_extractor = BertExtractor(config, token_helper)
+        token_helper = TokenHelper(config.xlnet_save_dir)
+        auto_extractor = AutoModelExtractor(config.xlnet_save_dir, config, token_helper)
         print('Load pretrained encoder ok')
 
-        global_encoder = GlobalEncoder(vocab, config, bert_extractor)
+        global_encoder = GlobalEncoder(vocab, config, auto_extractor)
         EDULSTM = EDULSTM(vocab, config)
         dec = Decoder(vocab, config)
 

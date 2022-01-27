@@ -107,13 +107,13 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
                     if config.save_after >= 0 and iter >= config.save_after:
                         parser.global_encoder.auto_extractor.auto_model.save_pretrained(config.xlnet_save_dir)
                         token_helper.tokenizer.save_pretrained(config.xlnet_save_dir)
-                        discoure_parser_model = {
+                        discourse_parser_model = {
                             "mlp_words": parser.global_encoder.mlp_words.state_dict(),
                             "rescale": parser.global_encoder.rescale.state_dict(),
                             "EDULSTM": parser.EDULSTM.state_dict(),
                             "dec": parser.dec.state_dict()
                         }
-                        torch.save(discoure_parser_model, config.save_model_path)
+                        torch.save(discourse_parser_model, config.save_model_path)
                         print('Saving model to ', config.save_model_path)
                         
 
@@ -138,7 +138,7 @@ def evaluate(gold_file, predict_file):
     F.print()
     return F.getAccuracy()
 
-def predict(data, parser, vocab, config, tokenizer, outputFile):
+def predict(data, parser, vocab, config, token_helper, outputFile):
     start = time.time()
     parser.eval()
     outf = open(outputFile, mode='w', encoding='utf8')
@@ -231,7 +231,7 @@ if __name__ == '__main__':
 
     print('Load pretrained encoder: ', config.xlnet_dir)
     token_helper = TokenHelper(config.xlnet_dir)
-    auto_extractor = AutoModelExtractor(config, token_helper)
+    auto_extractor = AutoModelExtractor(config.xlnet_dir, config, token_helper)
     print('Load pretrained encoder ok')
 
     global_encoder = GlobalEncoder(vocab, config, auto_extractor)
