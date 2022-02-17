@@ -112,6 +112,7 @@ def train(train_inst, dev_data, test_data, parser, vocab, config, token_helper):
                         discourse_parser_model = {
                             "mlp_words": parser.global_encoder.mlp_words.state_dict(),
                             "rescale": parser.global_encoder.rescale.state_dict(),
+                            "typeEmb": parser.typeEmb.state_dict(),
                             "EDULSTM": parser.EDULSTM.state_dict(),
                             "dec": parser.dec.state_dict()
                         }

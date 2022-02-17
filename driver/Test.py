@@ -9,6 +9,7 @@ from modules.Parser import *
 from modules.EDULSTM import *
 from modules.Decoder import *
 from modules.XLNetTune import *
+from modules.TypeEmb import *
 from data.TokenHelper import *
 from modules.GlobalEncoder import *
 from modules.Optimizer import *
@@ -35,7 +36,7 @@ if __name__ == '__main__':
     config = Configurable(args.config_file, extra_args)
 
     vocab = pickle.load(open(config.load_vocab_path, 'rb'))
-    discoure_parser_model = torch.load(config.load_model_path)
+    discouse_parser_model = torch.load(config.load_model_path)
 
     config.use_cuda = False
     if gpu and args.use_cuda: config.use_cuda = True
@@ -51,22 +52,25 @@ if __name__ == '__main__':
         print('Load pretrained encoder ok')
 
         global_encoder = GlobalEncoder(vocab, config, auto_extractor)
+        typeEmb = TypeEmb(vocab, config)
         EDULSTM = EDULSTM(vocab, config)
         dec = Decoder(vocab, config)
 
-        global_encoder.mlp_words.load_state_dict(discoure_parser_model["mlp_words"])
-        global_encoder.rescale.load_state_dict(discoure_parser_model["rescale"])
-        EDULSTM.load_state_dict(discoure_parser_model["EDULSTM"])
-        dec.load_state_dict(discoure_parser_model["dec"])
+        global_encoder.mlp_words.load_state_dict(discouse_parser_model["mlp_words"])
+        global_encoder.rescale.load_state_dict(discouse_parser_model["rescale"])
+        EDULSTM.load_state_dict(discouse_parser_model["EDULSTM"])
+        typeEmb.load_state_dict(discouse_parser_model["typeEmb"])
+        dec.load_state_dict(discouse_parser_model["dec"])
 
         if config.use_cuda:
             torch.backends.cudnn.enabled = True
             # torch.backends.cudnn.benchmark = True
             global_encoder = global_encoder.cuda()
             EDULSTM = EDULSTM.cuda()
+            typeEmb = typeEmb.cuda()
             dec = dec.cuda()
 
-        parser = DisParser(global_encoder, EDULSTM, dec, config)
+        parser = DisParser(global_encoder, EDULSTM, typeEmb, dec, config)
         predict(test_insts, parser, vocab, config, token_helper, args.test_file + '.out')
         evaluate(args.test_file, args.test_file + '.out')
 
