@@ -8,6 +8,7 @@ min_occur_count = 0
 
 [Save]
 save_dir = experiments/rst_model
+xlnet_save_dir =  %(save_dir)s/xlent-base-cased-rst-tuned
 config_file = %(save_dir)s/config.cfg
 save_model_path = %(save_dir)s/model
 save_vocab_path = %(save_dir)s/vocab
