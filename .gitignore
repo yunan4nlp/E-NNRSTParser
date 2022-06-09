@@ -14,3 +14,4 @@ text
 run.sh
 BiaffineDParser/__pycache__
 new-parser-model
+experiments/rst/sample_v3.*
