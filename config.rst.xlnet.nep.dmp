@@ -1,5 +1,5 @@
 [Data]
-xlnet_dir = ../dmp_pretraining/experiment/nep30m_dmp30m_model/model_8704
+xlnet_dir = model_8704
 data_dir = experiment/rst
 train_file = %(data_dir)s/rst.train312
 dev_file = %(data_dir)s/rst.dev35
@@ -8,6 +8,7 @@ min_occur_count = 0
 
 [Save]
 save_dir = experiment/rst_model
+xlnet_save_dir = %(save_dir)s/xlm_rst_tuned
 config_file = %(save_dir)s/config.cfg
 save_model_path = %(save_dir)s/model
 save_vocab_path = %(save_dir)s/vocab
@@ -47,7 +48,7 @@ train_iters = 10
 train_batch_size = 1
 test_batch_size = 1
 validate_every = 10000
-save_after = 10
+save_after = 0
 update_every = 1
 max_edu_len = 100000
 max_state_len = 1024
