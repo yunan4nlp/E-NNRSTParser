@@ -37,6 +37,6 @@ python -u driver/TrainTest.py  --config_file config.rst.xlnet.nep.dmp
 
 ## Testing 
 
-We provide our [trained model](https://drive.google.com/file/d/1aMUnktao5QRGP39h4FNlvljzDWQueyKT/view?usp=sharing) for testing.
+We provide our [trained model](https://drive.google.com/file/d/1773S8DagppeuNA6T_NgeXZ1IJ5D-l3QL/view?usp=sharing) for testing.
 
 python -u driver/Test.py  --config_file rst_model/config.cfg --test_file experiments/rst/sample.txt
